@@ -1,27 +1,55 @@
-import { describe, it, expect, vi } from "vitest"
-import { getRandomDogImage } from "../services/dogService"
+import express from 'express';
+import request from 'supertest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import dogRoutes from '../routes/dogRoutes';
 
-global.fetch = vi.fn()
+const app = express();
+app.use(express.json());
+app.use('/api/dogs', dogRoutes);
 
-describe("dogApi service tests", () => {
+app.use((_req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found',
+  });
+});
 
-  it("should return success response", async () => {
+describe('API tests for dog routes', () => {
 
-    const mockResponse = {
-      message: "https://mocked-dog.jpg",
-      status: "success"
-    }
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
 
-    ;(fetch as any).mockResolvedValueOnce({
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test('Test 1 - GET /api/dogs/random returns 200, success true and imageUrl string', async () => {
+
+    vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => mockResponse
-    })
+      json: async () => ({
+        message: 'https://images.dog.ceo/breeds/hound-afghan/n02088094_1003.jpg',
+        status: 'success',
+      }),
+    } as unknown as Response);
 
-    const result = await getRandomDogImage()
+    const res = await request(app).get('/api/dogs/random');
 
-    expect(result.imageUrl).toBe(mockResponse.message)
-    expect(result.status).toBe("success")
-    expect(fetch).toHaveBeenCalledOnce()
-  })
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toBeDefined();
+    expect(res.body.data).toHaveProperty('imageUrl');
+    expect(typeof res.body.data.imageUrl).toBe('string');
+  });
 
-})
+  test('Test 2 - GET /api/dogs/invalid returns 404 and correct error message', async () => {
+
+    const res = await request(app).get('/api/dogs/invalid');
+
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('error');
+    expect(res.body.error).toBe('Route not found');
+  });
+
+});

@@ -3,7 +3,6 @@ import request from "supertest"
 import express from "express"
 import { Request, Response } from "express"
 
-// 🔥 Mock controller BEFORE importing routes
 vi.mock("../controllers/dogController", () => ({
   getDogImage: vi.fn()
 }))
